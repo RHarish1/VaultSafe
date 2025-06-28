@@ -10,41 +10,54 @@ from core.crypto import decrypt_entry
 
 
 class ViewEntryWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, on_back=None):
         super().__init__(parent)
+        self.on_back = on_back
 
         self.vault = load_vault()
 
         layout = QVBoxLayout()
 
+        # Site selector
         self.site_combo = QComboBox()
         self.site_combo.addItems(sorted(self.vault.keys()))
         layout.addWidget(QLabel("Select Website:"))
         layout.addWidget(self.site_combo)
 
+        # Master password input
         self.master_input = QLineEdit()
         self.master_input.setPlaceholderText("Master Password")
         self.master_input.setEchoMode(QLineEdit.EchoMode.Password)
         layout.addWidget(QLabel("Master Password:"))
         layout.addWidget(self.master_input)
 
+        # Reveal credentials button
         self.reveal_btn = QPushButton("Reveal Credentials")
         self.reveal_btn.clicked.connect(self.reveal_entry)
         layout.addWidget(self.reveal_btn)
 
+        # Username field (readonly)
         self.username_display = QLineEdit()
         self.username_display.setReadOnly(True)
         layout.addWidget(QLabel("Username:"))
         layout.addWidget(self.username_display)
 
+        # Password field (readonly)
         self.password_display = QLineEdit()
         self.password_display.setReadOnly(True)
         layout.addWidget(QLabel("Password:"))
         layout.addWidget(self.password_display)
 
+        # Copy to clipboard
         self.copy_btn = QPushButton("Copy Password")
         self.copy_btn.clicked.connect(self.copy_to_clipboard)
         layout.addWidget(self.copy_btn)
+
+        # Optional back button
+        if self.on_back:
+            self.back_btn = QPushButton("← Back")
+            self.back_btn.clicked.connect(self.handle_back)
+            layout.addWidget(self.back_btn)
 
         self.setLayout(layout)
 
@@ -71,3 +84,7 @@ class ViewEntryWidget(QWidget):
         # Auto-clear after 10 seconds
         QTimer.singleShot(10_000, lambda: QGuiApplication.clipboard().clear())
         QMessageBox.information(self, "Copied", "Password copied to clipboard (clears in 10s)")
+
+    def handle_back(self):
+        if self.on_back:
+            self.on_back()

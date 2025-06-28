@@ -8,5 +8,10 @@
     "salt": "rfgGaDm37JO8NQcWPfEZtw==",
     "iv": "6u9llLsXX3Sx2Sdo",
     "ciphertext": "L7u5el/x1pAHtaM7e344IwQpeY2odRxRXoaZvyLSApp+Wa65g1wgwngQLf1GhsBt9WIZSI0Ny4I="
+  },
+  "githu.com": {
+    "salt": "Tnc1ciImg2s+iN5a10iXng==",
+    "iv": "XF/y5OC5/+ddNZae",
+    "ciphertext": "uV6HSuDWZ4L+3TgTehal6LYNHZOr5NaXKRShID2k0ltJj2kdO2yee3dIKhc3TS4hc8IKFGcOrH0BWFI="
   }
 }
