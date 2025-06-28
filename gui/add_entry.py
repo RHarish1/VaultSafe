@@ -3,11 +3,12 @@ from PyQt6.QtWidgets import (
 )
 from core.crypto import encrypt_entry
 from core.vault_io import load_vault, save_vault
-import json
+
 
 class AddEntryWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, on_back=None):
         super().__init__(parent)
+        self.on_back = on_back
 
         self.setMinimumHeight(300)
         layout = QVBoxLayout()
@@ -38,6 +39,11 @@ class AddEntryWidget(QWidget):
         self.save_btn.clicked.connect(self.save_entry)
         layout.addWidget(self.save_btn)
 
+        if self.on_back:
+            self.back_btn = QPushButton("← Back")
+            self.back_btn.clicked.connect(self.handle_back)
+            layout.addWidget(self.back_btn)
+
         self.setLayout(layout)
 
     def save_entry(self):
@@ -63,6 +69,7 @@ class AddEntryWidget(QWidget):
                 "ciphertext": ciphertext
             }
             save_vault(vault)
+
             QMessageBox.information(self, "Success", "Entry saved.")
             self.clear_fields()
 
@@ -74,3 +81,7 @@ class AddEntryWidget(QWidget):
         self.username_input.clear()
         self.password_input.clear()
         self.master_input.clear()
+
+    def handle_back(self):
+        if self.on_back:
+            self.on_back()
