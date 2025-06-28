@@ -1,0 +1,12 @@
+{
+  "github.com": {
+    "salt": "M2yF/oBpWOs99aH6NqVwNQ==",
+    "iv": "3jqFBrL4mJUoWPUX",
+    "ciphertext": "+ZLpMGlwfA7+sTaBEvUrMmOGPjetarmgq3nX/wLWEzI56jaGGZt1S+8sx7TZEXii70QptrzQA6i0XIiQ5iNgmgM="
+  },
+  "abc.com": {
+    "salt": "rfgGaDm37JO8NQcWPfEZtw==",
+    "iv": "6u9llLsXX3Sx2Sdo",
+    "ciphertext": "L7u5el/x1pAHtaM7e344IwQpeY2odRxRXoaZvyLSApp+Wa65g1wgwngQLf1GhsBt9WIZSI0Ny4I="
+  }
+}
