@@ -1,85 +1,77 @@
 from PyQt6.QtWidgets import (
-    QWidget, QFormLayout, QLabel, QLineEdit, QPushButton, QComboBox,
-    QMessageBox, QVBoxLayout
+    QWidget, QFormLayout, QLabel, QLineEdit, QPushButton,
+    QComboBox, QMessageBox, QVBoxLayout
 )
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QGuiApplication
-
-from core.vault_io import load_vault, save_vault
-from core.crypto import decrypt_entry, encrypt_entry
+from core.crypto import decrypt_entry
 
 
 class ViewEntryWidget(QWidget):
-    def __init__(self, parent=None, on_back=None):
-        super().__init__(parent)
+    def __init__(self, username, master_password, vault_data, on_back=None, on_edit_entry=None):
+        super().__init__()
+        self.username = username
+        self.master_password = master_password
+        self.vault_data = vault_data
         self.on_back = on_back
-        self.vault = load_vault()
+        self.on_edit_entry = on_edit_entry or (lambda **kwargs: None)
 
-        # === Layout Setup ===
-        form_layout = QFormLayout()
-        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        form_layout.setFormAlignment(Qt.AlignmentFlag.AlignTop)
-        form_layout.setHorizontalSpacing(20)
-        form_layout.setVerticalSpacing(15)
+        self.selected_site = None
+        self.selected_entry = None
 
+        self.setMinimumWidth(500)
+        self.setStyleSheet("background: #f4f7fa;")
+        self._build_ui()
+
+    def _build_ui(self):
         label_style = "font-weight: bold; font-size: 15px; color: #185a9d;"
 
-        # === Site ComboBox ===
+        # === ComboBoxes ===
         self.site_combo = QComboBox()
         self.site_combo.setMinimumHeight(36)
-        self.site_combo.addItems(sorted(self.vault.keys()))
-        form_layout.addRow(self._styled_label("Select Website:", label_style), self.site_combo)
+        self.site_combo.addItems(sorted(self.vault_data.keys()))
+        self.site_combo.currentIndexChanged.connect(self.populate_usernames)
 
-        # === Master Password Input ===
-        self.master_input = QLineEdit()
-        self.master_input.setPlaceholderText("Master Password")
-        self.master_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.master_input.setMinimumHeight(36)
-        form_layout.addRow(self._styled_label("Master Password:", label_style), self.master_input)
+        self.username_combo = QComboBox()
+        self.username_combo.setMinimumHeight(36)
 
-        # === Username Display ===
+        # === Decrypted Output ===
         self.username_display = QLineEdit()
         self.username_display.setReadOnly(True)
         self.username_display.setMinimumHeight(36)
-        form_layout.addRow(self._styled_label("Username:", label_style), self.username_display)
 
-        # === Password Display ===
         self.password_display = QLineEdit()
         self.password_display.setReadOnly(True)
+        self.password_display.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_display.setMinimumHeight(36)
-        form_layout.addRow(self._styled_label("Password:", label_style), self.password_display)
 
-        # === Button Area ===
-        self.reveal_btn = QPushButton("🔍 Reveal Credentials")
-        self.reveal_btn.setMinimumHeight(40)
-        self.reveal_btn.setStyleSheet("font-size: 16px; font-weight: 500; border-radius: 8px; background: #43cea2; color: white;")
+        # === Buttons ===
+        self.reveal_btn = QPushButton("🔍 Reveal")
         self.copy_btn = QPushButton("📋 Copy Password")
-        self.copy_btn.setMinimumHeight(40)
-        self.copy_btn.setStyleSheet("font-size: 15px; border-radius: 8px; background: #185a9d; color: white;")
-        self.update_btn = QPushButton("✏️ Update Entry")
-        self.update_btn.setMinimumHeight(40)
-        self.update_btn.setStyleSheet("font-size: 15px; border-radius: 8px; background: #f39c12; color: white;")
-        self.update_btn.setEnabled(False)
+        self.edit_btn = QPushButton("✏️ Edit Entry")
+        self.back_btn = QPushButton("← Back")
+
+        for btn in [self.reveal_btn, self.copy_btn, self.edit_btn, self.back_btn]:
+            btn.setMinimumHeight(40)
+
+        self.edit_btn.setEnabled(False)
+
+        # === Layout ===
+        form_layout = QFormLayout()
+        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        form_layout.setHorizontalSpacing(20)
+        form_layout.setVerticalSpacing(15)
+        form_layout.addRow(self._styled_label("Website:", label_style), self.site_combo)
+        form_layout.addRow(self._styled_label("Username:", label_style), self.username_combo)
+        form_layout.addRow(self._styled_label("Decrypted Username:", label_style), self.username_display)
+        form_layout.addRow(self._styled_label("Decrypted Password:", label_style), self.password_display)
 
         btn_layout = QVBoxLayout()
         btn_layout.addWidget(self.reveal_btn)
         btn_layout.addWidget(self.copy_btn)
-        btn_layout.addWidget(self.update_btn)
+        btn_layout.addWidget(self.edit_btn)
+        btn_layout.addWidget(self.back_btn)
 
-        if self.on_back:
-            self.back_btn = QPushButton("← Back")
-            self.back_btn.setMinimumHeight(40)
-            self.back_btn.setStyleSheet("font-size: 15px; border-radius: 8px; background: #888; color: white;")
-            btn_layout.addWidget(self.back_btn)
-
-        # === Set Up Actions ===
-        self.reveal_btn.clicked.connect(self.reveal_entry)
-        self.copy_btn.clicked.connect(self.copy_to_clipboard)
-        self.update_btn.clicked.connect(self.update_entry)
-        if self.on_back:
-            self.back_btn.clicked.connect(self.on_back)
-
-        # === Final Layout ===
         main_layout = QVBoxLayout()
         main_layout.addStretch(1)
         main_layout.addLayout(form_layout)
@@ -87,59 +79,66 @@ class ViewEntryWidget(QWidget):
         main_layout.addLayout(btn_layout)
         main_layout.addStretch(1)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+
         self.setLayout(main_layout)
 
-        self.setStyleSheet("background: #f4f7fa;")
+        self.reveal_btn.clicked.connect(self.reveal_entry)
+        self.copy_btn.clicked.connect(self.copy_password)
+        self.edit_btn.clicked.connect(self.edit_entry)
+        if self.on_back:
+            self.back_btn.clicked.connect(self.on_back)
+
+        self.populate_usernames()
 
     def _styled_label(self, text, style):
         label = QLabel(text)
         label.setStyleSheet(style)
         return label
 
+    def populate_usernames(self):
+        self.username_combo.clear()
+        site = self.site_combo.currentText()
+        if site and site in self.vault_data:
+            entries = self.vault_data[site]
+            for entry in entries:
+                try:
+                    decrypted = decrypt_entry(self.master_password, entry["salt"], entry["iv"], entry["ciphertext"])
+                    self.username_combo.addItem(decrypted.get("username", "???"))
+                except Exception:
+                    self.username_combo.addItem("???")
+
     def reveal_entry(self):
         site = self.site_combo.currentText()
-        master = self.master_input.text().strip()
+        selected_username = self.username_combo.currentText()
 
-        if not site or not master:
-            QMessageBox.warning(self, "Error", "Select a site and enter master password.")
-            return
+        for entry in self.vault_data.get(site, []):
+            decrypted = decrypt_entry(self.master_password, entry["salt"], entry["iv"], entry["ciphertext"])
+            if decrypted.get("username") == selected_username:
+                self.username_display.setText(decrypted["username"])
+                self.password_display.setText(decrypted["password"])
+                self.selected_site = site
+                self.selected_entry = decrypted
+                self.edit_btn.setEnabled(True)
+                return
 
-        try:
-            record = self.vault[site]
-            data = decrypt_entry(master, record["salt"], record["iv"], record["ciphertext"])
-            self.username_display.setText(data.get("username", "???"))
-            self.password_display.setText(data.get("password", "???"))
-            self.username_display.setReadOnly(False)
-            self.password_display.setReadOnly(False)
-            self.update_btn.setEnabled(True)
-            self._current_site = site
-            self._current_master = master
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to decrypt: {str(e)}")
+        QMessageBox.warning(self, "Error", "Could not decrypt entry.")
 
-    def copy_to_clipboard(self):
-        QGuiApplication.clipboard().setText(self.password_display.text())
+    def copy_password(self):
+        if  QGuiApplication.clipboard():
+            QGuiApplication.clipboard().setText(self.password_display.text())
         QTimer.singleShot(10_000, lambda: QGuiApplication.clipboard().clear())
-        QMessageBox.information(self, "Copied", "Password copied to clipboard (clears in 10s)")
+        QMessageBox.information(self, "Copied", "Password copied to clipboard. Will clear in 10 seconds.")
 
-    def update_entry(self):
-        site = getattr(self, '_current_site', None)
-        master = getattr(self, '_current_master', None)
-        if not site or not master:
-            QMessageBox.warning(self, "Error", "Reveal credentials first.")
+    def edit_entry(self):
+        if not (self.selected_site and self.selected_entry):
+            QMessageBox.warning(self, "Error", "Reveal an entry first.")
             return
-        username = self.username_display.text().strip()
-        password = self.password_display.text().strip()
-        if not (username and password):
-            QMessageBox.warning(self, "Error", "Username and password cannot be empty.")
-            return
-        try:
-            salt, iv, ciphertext = encrypt_entry(master, {"username": username, "password": password})
-            self.vault[site] = {"salt": salt, "iv": iv, "ciphertext": ciphertext}
-            save_vault(self.vault)
-            QMessageBox.information(self, "Success", "Entry updated.")
-            self.username_display.setReadOnly(True)
-            self.password_display.setReadOnly(True)
-            self.update_btn.setEnabled(False)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to update entry.\n{str(e)}")
+        self.on_edit_entry(
+            username=self.username,
+            master_password=self.master_password,
+            vault_data=self.vault_data,
+            editing=True,
+            edit_website=self.selected_site,
+            edit_username=self.selected_entry["username"],
+            edit_password=self.selected_entry["password"]
+        )
